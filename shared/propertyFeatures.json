@@ -1,0 +1,11 @@
+[
+  { "code": 1, "value": "免服務費" },
+  { "code": 2, "value": "社會住宅" },
+  { "code": 3, "value": "可報稅" },
+  { "code": 4, "value": "拎包入住" },
+  { "code": 5, "value": "近商圈" },
+  { "code": 6, "value": "有電梯" },
+  { "code": 7, "value": "可開伙" },
+  { "code": 8, "value": "高齡友善" },
+  { "code": 9, "value": "可入籍" }
+]

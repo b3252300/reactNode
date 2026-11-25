@@ -1,0 +1,15 @@
+{
+  "name": "react-node-auth-app",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently --kill-others --names backend,frontend --prefix-colors blue,green \"npm:dev --prefix backend\" \"npm:dev --prefix frontend\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "dependencies": {
+    "moment": "^2.31.0",
+    "tailwindcss": "^4.3.5"
+  }
+}
