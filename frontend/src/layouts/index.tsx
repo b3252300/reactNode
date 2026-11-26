@@ -11,6 +11,7 @@ import { AppSidebar } from "./component/app-sidebar";
 import ThemeToggle from "@/components/button/ThemeToggle";
 import { useAuth } from "@/views/auth/AuthContext";
 import { getPropertyAssetsApi } from "@/api/propertyStatusAssets";
+import { getButlerRepairRequestsApi } from "@/api/butlerRepairRequest";
 import type { PropertyAsset } from "@/types/propertyStatusAssets";
 
 const PAGE_TITLES: Record<string, string> = {
@@ -32,11 +33,18 @@ function Layout() {
   };
   const [error, setError] = useState("");
   const [assets, setAssets] = useState<PropertyAsset[]>([]);
+  const [pendingRepairCount, setPendingRepairCount] = useState(0);
 
   const fetchHeaderStats = useCallback(async () => {
     try {
-      const list = await getPropertyAssetsApi();
+      const [list, repairRes] = await Promise.all([
+        getPropertyAssetsApi(),
+        getButlerRepairRequestsApi(),
+      ]);
       setAssets(list);
+      setPendingRepairCount(
+        repairRes.counts.pending + repairRes.counts.in_progress
+      );
     } catch {
       // 若尚未有資料或失敗則保持現狀
     }
@@ -44,14 +52,16 @@ function Layout() {
 
   useEffect(() => {
     void fetchHeaderStats();
-    const handleAssetsUpdated = () => {
-      void fetchHeaderStats();
-    };
-    window.addEventListener("property-assets-updated", handleAssetsUpdated);
-    return () => {
-      window.removeEventListener("property-assets-updated", handleAssetsUpdated);
-    };
-  }, [fetchHeaderStats]);
+      const handleUpdated = () => {
+        void fetchHeaderStats();
+      };
+      window.addEventListener("property-assets-updated", handleUpdated);
+      window.addEventListener("butler-repair-updated", handleUpdated);
+      return () => {
+        window.removeEventListener("property-assets-updated", handleUpdated);
+        window.removeEventListener("butler-repair-updated", handleUpdated);
+      };
+    }, [fetchHeaderStats]);
 
   const stats = useMemo(() => {
     const total = assets.length;
@@ -109,76 +119,76 @@ function Layout() {
         activePath={pathname}
         handleSidebarClick={(path) => navigate(path)}
         assetCount={assets.length}
-        pendingRepairCount={stats.maintenanceCount}
+        pendingRepairCount={pendingRepairCount}
         userName={user?.name}
         userEmail={user?.email}
       />
 
-          <main className="main-container min-h-screen flex flex-col">
-            <SidebarHeader className="menu-header sticky top-0 z-20 backdrop-blur-md">
-              <div className="header-title-group">
-                <SidebarTrigger className="text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white" />
-                <h1>{pageTitle}</h1>
-              </div>
+      <main className="main-container min-h-screen flex flex-col">
+        <SidebarHeader className="menu-header sticky top-0 z-20 backdrop-blur-md">
+          <div className="header-title-group">
+            <SidebarTrigger className="text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white" />
+            <h1>{pageTitle}</h1>
+          </div>
 
-              <div className="header-stats-group">
-                <div className="header-stat-list">
-                  <div className="header-stat-item text-sm">
-                    <span>託管出租率:</span>
-                      <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                        {stats.occupancyRate}
-                      </span>
-                  </div>
-                  <div className="header-divider" />
-                  <div className="header-stat-item text-sm">
-                    <span>逾期待催繳:</span>
-                    <span
+          <div className="header-stats-group">
+            <div className="header-stat-list">
+              <div className="header-stat-item text-sm">
+                <span>託管出租率:</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                  {stats.occupancyRate}
+                </span>
+              </div>
+              <div className="header-divider" />
+              <div className="header-stat-item text-sm">
+                <span>逾期待催繳:</span>
+                <span
                   className={`font-bold ${stats.overdueCount > 0 ? "text-rose-600 dark:text-rose-400" : "text-slate-700 dark:text-slate-300"
-                        }`}
-                    >
-                      {stats.overdueCount} 戶 (NT${" "}
-                      {stats.overdueTotal.toLocaleString("zh-TW")})
-                    </span>
-                  </div>
-                </div>
-
-                <div className="header-period-badge !text-xs">
-                  <Calendar />
-                  <span>{currentPeriod}</span>
-                </div>
+                    }`}
+                >
+                  {stats.overdueCount} 戶 (NT${" "}
+                  {stats.overdueTotal.toLocaleString("zh-TW")})
+                </span>
               </div>
-
-              <div className="header-tools-group flex items-center gap-3">
-                  <div className="hidden sm:flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500 dark:bg-emerald-400"></span>
-                    <span>你好，{user?.name || user?.email || "管理員"}</span>
-                  </div>
-                  <ThemeToggle />
-                  <button
-                    type="button"
-                    className="secondary-button flex items-center gap-1.5"
-                    onClick={handleLogout}
-                  >
-                    <LogOut className="w-3.5 h-3.5" />
-                    <span>登出</span>
-                  </button>
-                </div>
-            </SidebarHeader>
-
-            {error && (
-              <div className="mx-8 mt-4">
-                <p className="error-message" role="alert">
-                  {error}
-                </p>
-              </div>
-            )}
-
-            <div className="content-container flex-1">
-              <Outlet />
             </div>
-          </main>
-        </SidebarProvider>
-        );
+
+            <div className="header-period-badge !text-xs">
+              <Calendar />
+              <span>{currentPeriod}</span>
+            </div>
+          </div>
+
+          <div className="header-tools-group flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 dark:bg-emerald-400"></span>
+              <span>你好，{user?.name || user?.email || "管理員"}</span>
+            </div>
+            <ThemeToggle />
+            <button
+              type="button"
+              className="secondary-button flex items-center gap-1.5"
+              onClick={handleLogout}
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>登出</span>
+            </button>
+          </div>
+        </SidebarHeader>
+
+        {error && (
+          <div className="mx-8 mt-4">
+            <p className="error-message" role="alert">
+              {error}
+            </p>
+          </div>
+        )}
+
+        <div className="content-container flex-1">
+          <Outlet />
+        </div>
+      </main>
+    </SidebarProvider>
+  );
 }
 
-        export default Layout;
+export default Layout;

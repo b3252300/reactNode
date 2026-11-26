@@ -116,7 +116,7 @@ export default function LoginPage() {
             </div>
 
             <p className="eyebrow">帳戶安全驗證</p>
-            <h1>登入管理中樞</h1>
+            <h1>登入管理</h1>
             <p className="description">請使用已授權的物業管理師帳戶登入系統。</p>
 
             {status === 'error' && (

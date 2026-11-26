@@ -122,7 +122,7 @@ function EventListViewCardOpaz({
               </div>
             </div>
 
-            <div className="card-footer !mt-1 text-xs border-t border-slate-800/60 pt-2.5">
+            <div className="card-footer !mt-1 text-xs hr pt-2.5">
               <span>租約到期: {GetDateYYYYMMDD(item.leaseEndDate)}</span>
               <ArrowRight />
             </div>

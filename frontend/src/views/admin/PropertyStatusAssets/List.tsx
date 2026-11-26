@@ -320,10 +320,10 @@ function List() {
           <div className="h-12 w-12 rounded-2xl bg-slate-800/80 flex items-center justify-center text-slate-400">
             <Building2 className="w-6 h-6" />
           </div>
-          <div className="text-base font-semibold text-slate-200">
+          <div className="text-base font-semibold text-slate-800">
             目前沒有符合條件的房屋物件
           </div>
-          <p className="text-xs text-slate-400 max-w-sm">
+          <p className="text-sm text-slate-800 max-w-sm">
             您可以嘗試切換上方的房態篩選標籤、清除搜尋關鍵字，或直接點擊「新增房屋物件」建立第一筆託管資產。
           </p>
           {(statusFilter !== "all" || searchInput) && (

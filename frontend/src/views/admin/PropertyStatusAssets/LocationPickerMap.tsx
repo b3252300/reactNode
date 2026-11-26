@@ -315,7 +315,7 @@ function LocationPickerMap({
       </div>
 
       {/* 互動迷你地圖 */}
-      <div className="relative h-56 w-full overflow-hidden rounded-lg border border-slate-700/80 bg-[#090d16]">
+      <div className="relative h-56 w-full overflow-hidden rounded-lg border border-slate-500 bg-[#090d16]">
         <MapContainer
           center={initialView.center}
           zoom={initialView.zoom}

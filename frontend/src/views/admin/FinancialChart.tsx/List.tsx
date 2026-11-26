@@ -13,180 +13,82 @@ import {
   BarChart3,
   ArrowUpRight,
 } from "lucide-react";
-import { getPropertyAssetsApi } from "@/api/propertyStatusAssets";
-import type { PropertyAsset } from "@/types/propertyStatusAssets";
+import {
+  exportFinancialChartCsvApi,
+  getFinancialChartApi,
+} from "@/api/financialChart";
+import type {
+  FinancialAssetItem,
+  FinancialMetrics,
+  FinancialPeriod,
+  MonthlyRevenuePoint,
+  RoomTypeRevenueItem,
+} from "@/types/financialChart";
 import useDate from "@/utils/date";
 
 const { GetDateYYYYMMDD } = useDate();
 
+const EMPTY_METRICS: FinancialMetrics = {
+  expectedMonthlyRent: 0,
+  collectedEstimate: 0,
+  totalOverdue: 0,
+  totalDeposit: 0,
+  avgRentPerPing: 0,
+  potentialVacantRent: 0,
+  collectionRate: "100.0",
+  overdueCount: 0,
+  totalAssets: 0,
+};
+
 function FinancialChartList() {
-  const [assets, setAssets] = useState<PropertyAsset[]>([]);
+  const [items, setItems] = useState<FinancialAssetItem[]>([]);
+  const [metrics, setMetrics] = useState<FinancialMetrics>(EMPTY_METRICS);
+  const [roomTypeBreakdown, setRoomTypeBreakdown] = useState<RoomTypeRevenueItem[]>([]);
+  const [monthlySeries, setMonthlySeries] = useState<MonthlyRevenuePoint[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPeriod, setSelectedPeriod] = useState<"6m" | "12m">("6m");
+  const [selectedPeriod, setSelectedPeriod] = useState<FinancialPeriod>("6m");
 
   useEffect(() => {
+    let cancelled = false;
     async function load() {
       setLoading(true);
       try {
-        const list = await getPropertyAssetsApi();
-        setAssets(list);
+        const res = await getFinancialChartApi(selectedPeriod);
+        if (cancelled) return;
+        setMetrics(res.metrics);
+        setRoomTypeBreakdown(res.roomTypeBreakdown);
+        setMonthlySeries(res.monthlySeries);
+        setItems(res.items);
       } catch (err) {
         console.error("載入財務資料失敗：", err);
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
     void load();
-  }, []);
+      return() => {
+    cancelled = true;
+  };
+  }, [selectedPeriod]);
 
-  const metrics = useMemo(() => {
-    const activeLeases = assets.filter((a) =>
-      ["rented", "expiring", "overdue"].includes(a.status)
-    );
-    const expectedMonthlyRent = activeLeases.reduce(
-      (sum, a) => sum + Number(a.monthlyRent || 0) + Number(a.managementFee || 0),
-      0
-    );
-    const totalOverdue = assets.reduce(
-      (sum, a) => sum + Number(a.overdueAmount || 0),
-      0
-    );
-    const collectedEstimate = Math.max(0, expectedMonthlyRent - totalOverdue);
-    const totalDeposit = activeLeases.reduce(
-      (sum, a) => sum + Number(a.deposit || 0),
-      0
-    );
-    const totalArea = activeLeases.reduce(
-      (sum, a) => sum + Number(a.area || 0),
-      0
-    );
-    const avgRentPerPing =
-      totalArea > 0 ? Math.round(expectedMonthlyRent / totalArea) : 0;
-    const potentialVacantRent = assets
-      .filter((a) => a.status === "vacant" || a.status === "maintenance")
-      .reduce((sum, a) => sum + Number(a.monthlyRent || 0), 0);
+const maxChartValue = useMemo(() => {
+  return Math.max(...monthlySeries.map((m) => m.expected), 1);
+}, [monthlySeries]);
 
-    const collectionRate =
-      expectedMonthlyRent > 0
-        ? ((collectedEstimate / expectedMonthlyRent) * 100).toFixed(1)
-        : "100.0";
-
-    return {
-      expectedMonthlyRent,
-      collectedEstimate,
-      totalOverdue,
-      totalDeposit,
-      avgRentPerPing,
-      potentialVacantRent,
-      collectionRate,
-      overdueCount: assets.filter(
-        (a) => a.status === "overdue" || (a.overdueAmount ?? 0) > 0
-      ).length,
-    };
-  }, [assets]);
-
-  // 依房型統計收益結構
-  const roomTypeBreakdown = useMemo(() => {
-    const map = new Map<
-      string,
-      { roomType: string; count: number; revenue: number }
-    >();
-    for (const item of assets) {
-      const key = item.roomType?.trim() || "其他房型";
-      const current = map.get(key) || { roomType: key, count: 0, revenue: 0 };
-      current.count += 1;
-      current.revenue += Number(item.monthlyRent || 0);
-      map.set(key, current);
+  const handleExportCsv = async () => {
+    try {
+      const blob = await exportFinancialChartCsvApi();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `房屋人資產_財務收支報表_${new Date().toISOString().slice(0, 10)}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("匯出 CSV 財務報表失敗：", err);
     }
-    const list = Array.from(map.values()).sort((a, b) => b.revenue - a.revenue);
-    const totalRev = list.reduce((s, i) => s + i.revenue, 0) || 1;
-    return list.map((item) => ({
-      ...item,
-      share: Math.round((item.revenue / totalRev) * 100),
-    }));
-  }, [assets]);
-
-  // 近 6 個月／12 個月模擬與當月實際營收趨勢
-  const monthlySeries = useMemo(() => {
-    const baseExpected = metrics.expectedMonthlyRent || 168000;
-    const baseCollected = metrics.collectedEstimate || 152000;
-    const factors6 = [
-      { label: "5月", expFactor: 0.88, colFactor: 0.86 },
-      { label: "6月", expFactor: 0.91, colFactor: 0.89 },
-      { label: "7月", expFactor: 0.94, colFactor: 0.91 },
-      { label: "8月", expFactor: 0.96, colFactor: 0.95 },
-      { label: "9月", expFactor: 0.98, colFactor: 0.94 },
-      { label: "本月", expFactor: 1, colFactor: 1, isCurrent: true },
-    ];
-    const factors12 = [
-      { label: "11月", expFactor: 0.78, colFactor: 0.76 },
-      { label: "12月", expFactor: 0.8, colFactor: 0.79 },
-      { label: "1月", expFactor: 0.82, colFactor: 0.8 },
-      { label: "2月", expFactor: 0.84, colFactor: 0.82 },
-      { label: "3月", expFactor: 0.85, colFactor: 0.84 },
-      { label: "4月", expFactor: 0.87, colFactor: 0.85 },
-      ...factors6,
-    ];
-    const source = selectedPeriod === "6m" ? factors6 : factors12;
-    return source.map((m) => {
-      const expected = m.isCurrent
-        ? baseExpected
-        : Math.round(baseExpected * m.expFactor);
-      const collected = m.isCurrent
-        ? baseCollected
-        : Math.round(baseExpected * m.colFactor);
-      return {
-        label: m.label,
-        expected,
-        collected,
-        isCurrent: Boolean(m.isCurrent),
-      };
-    });
-  }, [metrics.expectedMonthlyRent, metrics.collectedEstimate, selectedPeriod]);
-
-  const maxChartValue = useMemo(() => {
-    return Math.max(...monthlySeries.map((m) => m.expected), 1);
-  }, [monthlySeries]);
-
-  const handleExportCsv = () => {
-    const headers = [
-      "房號",
-      "地址",
-      "樓層",
-      "房型",
-      "坪數",
-      "狀態",
-      "承租人",
-      "月租金(NT$)",
-      "管理費(NT$)",
-      "押金(NT$)",
-      "逾期金額(NT$)",
-      "租約到期日",
-    ];
-    const rows = assets.map((item) => [
-      item.roomNumber,
-      `"${(item.address || "").replace(/"/g, '""')}"`,
-      item.floor || "",
-      item.roomType || "",
-      item.area || 0,
-      item.statusText || item.status,
-      item.tenantName || "待招租",
-      item.monthlyRent || 0,
-      item.managementFee || 0,
-      item.deposit || 0,
-      item.overdueAmount || 0,
-      GetDateYYYYMMDD(item.leaseEndDate),
-    ]);
-    const csvContent =
-      "\uFEFF" +
-      [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `房屋人資產_財務收支報表_${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
   };
 
   if (loading) {
@@ -457,7 +359,7 @@ function FinancialChartList() {
           <div className="w-full pt-4 mt-4 border-t border-slate-800/80 flex items-center justify-between text-xs">
             <span>託管總物件數</span>
             <span className="font-mono font-bold">
-              共 {assets.length} 戶資產
+              共 {metrics.totalAssets} 戶資產
             </span>
           </div>
         </Card>
@@ -481,7 +383,7 @@ function FinancialChartList() {
           <Button
             variant="secondary"
             size="sm"
-            onClick={handleExportCsv}
+            onClick={() => void handleExportCsv()}
             className="cursor-pointer gap-1.5"
           >
             <Download className="w-4 h-4" />
@@ -505,67 +407,69 @@ function FinancialChartList() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
-              {assets.map((item) => (
-                <tr
-                  key={item.id || item.roomNumber}
-                  className="hover:bg-slate-50 dark:hover:bg-slate-900/60 transition"
-                >
-                  <td className="py-3 px-3 font-mono font-bold text-slate-900 dark:text-slate-100">
-                    {item.roomNumber}
-                  </td>
-                  <td className="py-3 px-3">
-                    <div className="text-slate-800 dark:text-slate-200 font-medium">
-                      {item.address || "—"}
-                    </div>
-                    <div className="text-xs text-slate-400">
-                      {item.roomType} {item.area ? `• ${item.area} 坪` : ""}
-                    </div>
-                  </td>
-                  <td className="py-3 px-3 ">
-                    {item.tenantName || (
-                      <span className="text-slate-400">待招租</span>
-                    )}
-                  </td>
-                  <td className="py-3 px-3">
-                    <span
-                      className={`status-badge card-tag ${item.status === "rented"
-                        ? "status-rented"
-                        : item.status === "expiring"
-                          ? "status-expiring"
-                          : item.status === "maintenance"
-                            ? "status-maintenance"
-                            : item.status === "vacant"
-                              ? "status-vacant"
-                              : ""
-                        }`}
+                {
+                  items.map((item) => (
+                    <tr
+                      key={item.id || item.roomNumber}
+                      className="hover:bg-slate-50 dark:hover:bg-slate-900/60 transition"
                     >
-                      <span className="status-dot"></span>
-                      {item.statusText}
-                    </span>
-                  </td>
-                  <td className="py-3 px-3 text-right font-mono font-semibold text-amber-400">
-                    NT$ {Number(item.monthlyRent || 0).toLocaleString("zh-TW")}
-                  </td>
-                  <td className="py-3 px-3 text-right font-mono ">
-                    NT$ {Number(item.managementFee || 0).toLocaleString("zh-TW")}
-                  </td>
-                  <td className="py-3 px-3 text-right font-mono ">
-                    NT$ {Number(item.deposit || 0).toLocaleString("zh-TW")}
-                  </td>
-                  <td className="py-3 px-3 text-right font-mono">
-                    {(item.overdueAmount ?? 0) > 0 ? (
-                      <span className="font-bold text-rose-400">
-                        NT$ {Number(item.overdueAmount).toLocaleString("zh-TW")}
-                      </span>
-                    ) : (
-                      <span>—</span>
-                    )}
-                  </td>
-                  <td className="py-3 px-3 text-right font-mono text-xs">
-                    {GetDateYYYYMMDD(item.leaseEndDate)}
-                  </td>
-                </tr>
-              ))}
+                      <td className="py-3 px-3 font-mono font-bold text-slate-900 dark:text-slate-100">
+                        {item.roomNumber}
+                      </td>
+                      <td className="py-3 px-3">
+                        <div className="text-slate-800 dark:text-slate-200 font-medium">
+                          {item.address || "—"}
+                        </div>
+                        <div className="text-xs text-slate-400">
+                          {item.roomType} {item.area ? `• ${item.area} 坪` : ""}
+                        </div>
+                      </td>
+                      <td className="py-3 px-3 ">
+                        {item.tenantName || (
+                          <span className="text-slate-400">待招租</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-3">
+                        <span
+                          className={`status-badge card-tag ${item.status === "rented"
+                            ? "status-rented"
+                            : item.status === "expiring"
+                              ? "status-expiring"
+                              : item.status === "maintenance"
+                                ? "status-maintenance"
+                                : item.status === "vacant"
+                                  ? "status-vacant"
+                                  : ""
+                            }`}
+                        >
+                          <span className="status-dot"></span>
+                          {item.statusText}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono font-semibold text-amber-400">
+                        NT$ {Number(item.monthlyRent || 0).toLocaleString("zh-TW")}
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono ">
+                        NT$ {Number(item.managementFee || 0).toLocaleString("zh-TW")}
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono ">
+                        NT$ {Number(item.deposit || 0).toLocaleString("zh-TW")}
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono">
+                        {(item.overdueAmount ?? 0) > 0 ? (
+                          <span className="font-bold text-rose-400">
+                            NT$ {Number(item.overdueAmount).toLocaleString("zh-TW")}
+                          </span>
+                        ) : (
+                          <span>—</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono text-xs">
+                        {GetDateYYYYMMDD(item.leaseEndDate)}
+                      </td>
+                    </tr>
+                  ))
+                }
             </tbody>
           </table>
         </div>

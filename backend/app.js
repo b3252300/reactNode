@@ -4,8 +4,9 @@ const cookieParser = require('cookie-parser');
 const helmet = require('helmet');
 const { getConfig } = require('./config');
 const authRoutes = require('./routes/auth.routes');
-
 const propertyStatusAssetsRoutes = require('./routes/propertyStatusAssets.routes');
+const butlerRepairRequestRoutes = require('./routes/butlerRepairRequest.routes');
+const financialChartRoutes = require('./routes/financialChart.routes');
 const app = express();
 
 app.disable('x-powered-by');
@@ -34,8 +35,10 @@ app.use((req, res, next) => {
 });
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
-app.use('/api/auth', authRoutes);
-app.use('/api/property-status-assets', propertyStatusAssetsRoutes);
+app.use('/api/auth', authRoutes);//登入
+app.use('/api/property-status-assets', propertyStatusAssetsRoutes); //房產狀態資產
+app.use('/api/butler-repair-request', butlerRepairRequestRoutes); //管家報修派工
+app.use('/api/financial-chart', financialChartRoutes); //財務收支圖表
 
 app.use((error, req, res, next) => {
   if (res.headersSent) {

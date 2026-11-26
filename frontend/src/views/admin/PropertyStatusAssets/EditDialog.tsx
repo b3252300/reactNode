@@ -331,7 +331,7 @@ function EditDialog({
                 {imagePreviews.map((image, index) => (
                   <div
                     key={`${index}-${image.slice(0, 30)}`}
-                    className="group relative overflow-hidden rounded-lg border border-slate-800"
+                    className="group relative overflow-hidden rounded-lg border border-slate-300"
                   >
                     <img
                       src={image}
@@ -564,11 +564,10 @@ function EditDialog({
                   <label
                     key={feature.code}
                     htmlFor={checkboxId}
-                    className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium transition cursor-pointer select-none ${
-                      isChecked
-                        ? "border-amber-400 bg-amber-50 text-amber-700 dark:border-amber-500/60 dark:bg-amber-500/15 dark:text-amber-300"
-                        : "border-slate-300 bg-slate-50 text-slate-700 hover:border-slate-400 dark:border-slate-700/80 dark:bg-slate-900/70 dark:text-slate-300 dark:hover:border-slate-600"
-                    }`}
+                    className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium transition cursor-pointer select-none ${isChecked
+                      ? "border-amber-400 bg-amber-50 text-amber-700 dark:border-amber-500/60 dark:bg-amber-500/15 dark:text-amber-300"
+                      : "border-slate-300 bg-slate-50 text-slate-700 hover:border-slate-400 dark:border-slate-700/80 dark:bg-slate-900/70 dark:text-slate-300 dark:hover:border-slate-600"
+                      }`}
                   >
                     <input
                       type="checkbox"
