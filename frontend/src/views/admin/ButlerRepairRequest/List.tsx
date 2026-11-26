@@ -43,47 +43,7 @@ interface RepairTicket {
 
 const STORAGE_KEY = "property_butler_repair_tickets_v1";
 
-const DEFAULT_TICKETS: RepairTicket[] = [
-  {
-    id: "WO-202610-01",
-    roomNumber: "A261015-3821",
-    address: "台北市信義區松仁路 100 號 7F",
-    tenantName: "陳冠宇",
-    category: "家電冷氣",
-    title: "主臥變頻冷氣滴水暨冷媒壓力檢測",
-    butlerName: "張志豪 管家",
-    priority: "urgent",
-    status: "in_progress",
-    estimatedCost: 2800,
-    createdAt: "2026/10/18",
-  },
-  {
-    id: "WO-202610-02",
-    roomNumber: "A261012-7104",
-    address: "台北市大安區敦化南路二段 58 號 11F",
-    tenantName: "林雅婷",
-    category: "水電修繕",
-    title: "乾濕分離浴室矽利康發霉重打與排水疏通",
-    butlerName: "王建銘 管家",
-    priority: "normal",
-    status: "pending",
-    estimatedCost: 1500,
-    createdAt: "2026/10/19",
-  },
-  {
-    id: "WO-202610-03",
-    roomNumber: "A260928-1942",
-    address: "新北市板橋區文化路一段 220 號 5F",
-    tenantName: "黃柏翰",
-    category: "退租點交",
-    title: "租約期滿退租屋況勘查、水電抄表與鑰匙點交",
-    butlerName: "陳品妤 管家",
-    priority: "inspection",
-    status: "completed",
-    estimatedCost: 0,
-    createdAt: "2026/10/15",
-  },
-];
+const DEFAULT_TICKETS: RepairTicket[] = [];
 
 const inputClass = "form-input";
 

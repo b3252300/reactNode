@@ -68,6 +68,7 @@ export default function Home() {
     filters.rentRangeId !== 'all' ||
     filters.managementFeeType !== 'all' ||
     filters.layout !== 'all' ||
+    filters.features.length > 0 ||
     filters.sort !== 'newest',
   );
 
@@ -83,6 +84,7 @@ export default function Home() {
         maxRent: selectedRentRange.maxRent,
         managementFeeType: filters.managementFeeType !== 'all' ? filters.managementFeeType : undefined,
         layout: filters.layout !== 'all' ? filters.layout : undefined,
+        features: filters.features.length > 0 ? filters.features : undefined,
         sort: filters.sort,
       });
       console.log(data, "getPublicVacantAssetsApi");
@@ -103,6 +105,7 @@ export default function Home() {
     selectedRentRange.maxRent,
     filters.managementFeeType,
     filters.layout,
+    filters.features,
     filters.sort,
   ]);
 

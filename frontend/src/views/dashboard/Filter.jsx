@@ -1,17 +1,20 @@
 import { Link } from 'react-router-dom';
 import {
   ArrowUpDown,
+  Check,
   Home as HomeIcon,
   Map as MapIcon,
   MapPin,
   RotateCcw,
   Search,
   SlidersHorizontal,
+  Tag,
   X,
 } from 'lucide-react';
 import {
   buildFilterQueryString,
   CITY_OPTIONS,
+  FEATURE_OPTIONS,
   INITIAL_FILTERS,
   LAYOUT_OPTIONS,
   MANAGEMENT_FEE_OPTIONS,
@@ -22,6 +25,7 @@ import {
 
 export {
   CITY_OPTIONS,
+  FEATURE_OPTIONS,
   INITIAL_FILTERS,
   LAYOUT_OPTIONS,
   MANAGEMENT_FEE_OPTIONS,
@@ -38,6 +42,14 @@ function Filter({
   loading,
   totalCount,
 }) {
+  const selectedFeatures = Array.isArray(filters.features) ? filters.features : [];
+
+  const handleToggleFeature = (code) => {
+    const nextFeatures = selectedFeatures.includes(code)
+      ? selectedFeatures.filter((item) => item !== code)
+      : [...selectedFeatures, code].sort((a, b) => a - b);
+    onFilterChange('features', nextFeatures);
+  };
   return (
     <section className="panel-surface backdrop-blur p-5 sm:p-6 shadow-lg shadow-slate-900/5 dark:shadow-xl dark:shadow-black/30 space-y-5">
       {/* 第一列：地點 / 關鍵字搜尋 */}
@@ -174,6 +186,47 @@ function Filter({
             ))}
           </select>
         </div>
+      </div>
+
+      {/* 第四列：物件標籤多選篩選 */}
+      <div className="flex flex-wrap items-center gap-2 pt-1">
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 mr-1">
+          <Tag className="h-3.5 w-3.5 text-amber-500 dark:text-amber-400" />
+          物件標籤
+          {selectedFeatures.length > 0 && (
+            <span className="inline-flex items-center justify-center rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+              {selectedFeatures.length}
+            </span>
+          )}
+        </span>
+        {FEATURE_OPTIONS.map((feature) => {
+          const isActive = selectedFeatures.includes(feature.code);
+          return (
+            <button
+              key={feature.code}
+              type="button"
+              aria-pressed={isActive}
+              onClick={() => handleToggleFeature(feature.code)}
+              className={`tab-btn inline-flex items-center gap-1 px-3 sm:text-sm ${isActive
+                ? 'tab-btn-active'
+                : 'border border-slate-200 bg-slate-50 hover:border-slate-300 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-900/80 dark:hover:border-slate-700 dark:hover:text-slate-100'
+                }`}
+            >
+              {isActive && <Check className="h-3.5 w-3.5" />}
+              {feature.value}
+            </button>
+          );
+        })}
+        {selectedFeatures.length > 0 && (
+          <button
+            type="button"
+            onClick={() => onFilterChange('features', [])}
+            className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition cursor-pointer"
+          >
+            <X className="h-3 w-3" />
+            清除標籤
+          </button>
+        )}
       </div>
 
       {/* 結果統計與重設按鈕 */}

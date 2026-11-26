@@ -1,8 +1,13 @@
-const path = require('node:path');
+const { isWorkers, getWorkerEnv } = require('./utils/runtime');
 
-require('dotenv').config({ path: path.join(__dirname, '.env') });
+// 本機 Node.js 從 backend/.env 讀設定；Cloudflare Workers 由 Durable Object 的 env（或 process.env）讀取。
+if (!isWorkers) {
+  const path = require('node:path');
+  require('dotenv').config({ path: path.join(__dirname, '.env') });
+}
 
 function getConfig() {
+  const sourceEnv = (isWorkers && getWorkerEnv()) || process.env;
   const {
     NODE_ENV = 'development',
     PORT = '4000',
@@ -10,7 +15,7 @@ function getConfig() {
     CLIENT_ORIGIN,
     JWT_ACCESS_SECRET,
     COOKIE_SAME_SITE = 'lax',
-  } = process.env;
+  } = sourceEnv;
 
   if (!MONGODB_URI) {
     throw new Error(

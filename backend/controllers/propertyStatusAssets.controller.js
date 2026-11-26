@@ -150,6 +150,16 @@ const optionalBoundLongitude = z.preprocess(
   z.coerce.number().finite().min(-180).max(180).optional(),
 );
 
+const optionalFeatureCodesQuery = z.preprocess((value) => {
+  if (value === undefined || value === null || value === '') return undefined;
+  const rawList = Array.isArray(value) ? value : [value];
+  const tokens = rawList
+    .flatMap((item) => String(item).split(','))
+    .map((item) => item.trim())
+    .filter(Boolean);
+  return tokens.length > 0 ? tokens : undefined;
+}, z.array(featureCodeSchema).max(PROPERTY_FEATURES.length).optional());
+
 const publicVacantQuerySchema = z.object({
   q: z.string().trim().max(100).optional(),
   city: z.string().trim().max(30).optional(),
@@ -158,6 +168,7 @@ const publicVacantQuerySchema = z.object({
   maxRent: optionalNonNegativeNumber,
   managementFeeType: z.enum(['all', 'included', 'extra']).optional(),
   layout: z.string().trim().max(50).optional(),
+  features: optionalFeatureCodesQuery,
   sort: z.enum(['newest', 'rent_asc', 'rent_desc', 'area_desc']).optional(),
   north: optionalBoundLatitude,
   south: optionalBoundLatitude,
@@ -315,7 +326,7 @@ async function listPublicVacantAssets(req, res) {
   }
 
 
-  const { q, city, roomType, minRent, maxRent, managementFeeType, layout, sort, north, south, east, west } = parsed.data;
+  const { q, city, roomType, minRent, maxRent, managementFeeType, layout, features, sort, north, south, east, west } = parsed.data;
 
   const andConditions = [{ status: 'vacant' }];
 
@@ -340,6 +351,7 @@ async function listPublicVacantAssets(req, res) {
         { address: keywordRegex },
         { roomType: keywordRegex },
         { notes: keywordRegex },
+        { featuresText: keywordRegex },
       ],
     });
 
@@ -392,6 +404,11 @@ async function listPublicVacantAssets(req, res) {
         { notes: layoutRegex },
       ],
     });
+  }
+
+  if (Array.isArray(features) && features.length > 0) {
+    const featureCodes = [...new Set(features)];
+    andConditions.push({ features: { $all: featureCodes } });
   }
 
   const query = andConditions.length === 1 ? andConditions[0] : { $and: andConditions };

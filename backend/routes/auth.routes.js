@@ -1,11 +1,13 @@
 // 定義驗證端點,並對登入與註冊請求套用速率限制
 const express = require('express');
-const rateLimit = require('express-rate-limit');
+const { rateLimit } = require('../middleware/rateLimit');
 const authController = require('../controllers/auth.controller');
 const { requireAuth } = require('../middleware/requireAuth');
 
 const router = express.Router();
 const loginLimiter = rateLimit({
+  // Cloudflare Workers 上使用的 Rate Limiting binding 名稱（見 wrangler.jsonc）。
+  binding: 'LOGIN_LIMITER',
   // 限制統計期間：15 分鐘內累計請求次數。
   windowMs: 15 * 60 * 1000,
   // 每個統計期間內，單一來源最多可嘗試登入 10 次。
@@ -19,6 +21,7 @@ const loginLimiter = rateLimit({
 });
 
 const registerLimiter = rateLimit({
+  binding: 'REGISTER_LIMITER',
   // 限制統計期間：1 小時內累計請求次數。
   windowMs: 60 * 60 * 1000,
   // 每個統計期間內，單一來源最多可註冊 12 次。

@@ -1,4 +1,5 @@
 import { TAIWAN_CITIES } from '@/constants/taiwanCities';
+import { PROPERTY_FEATURES } from '@/constants/propertyFeatures';
 
 export const INITIAL_FILTERS = {
   keyword: '',
@@ -7,8 +8,11 @@ export const INITIAL_FILTERS = {
   rentRangeId: 'all',
   managementFeeType: 'all',
   layout: 'all',
+  features: [],
   sort: 'newest',
 };
+
+export const FEATURE_OPTIONS = PROPERTY_FEATURES;
 
 export const CITY_OPTIONS = [
   { id: 'all', label: '縣市不限' },
@@ -59,7 +63,17 @@ const VALID_ROOM_TYPES = new Set(ROOM_TYPE_OPTIONS);
 const VALID_RENT_RANGES = new Set(RENT_RANGE_OPTIONS.map((item) => item.id));
 const VALID_MANAGEMENT_FEES = new Set(MANAGEMENT_FEE_OPTIONS.map((item) => item.id));
 const VALID_LAYOUTS = new Set(LAYOUT_OPTIONS.map((item) => item.id));
+const VALID_FEATURE_CODES = new Set(FEATURE_OPTIONS.map((item) => item.code));
 const VALID_SORTS = new Set(SORT_OPTIONS.map((item) => item.id));
+
+export function normalizeFeatureCodes(codes) {
+  if (!Array.isArray(codes)) return [];
+  return [...new Set(
+    codes
+      .map((code) => Number(code))
+      .filter((code) => Number.isInteger(code) && VALID_FEATURE_CODES.has(code)),
+  )].sort((a, b) => a - b);
+}
 
 export function parseFiltersFromSearchParams(searchParams) {
   const keyword = searchParams.get('q') || '';
@@ -68,7 +82,12 @@ export function parseFiltersFromSearchParams(searchParams) {
   const rawRentRangeId = searchParams.get('rentRangeId') || INITIAL_FILTERS.rentRangeId;
   const rawManagementFeeType = searchParams.get('managementFeeType') || INITIAL_FILTERS.managementFeeType;
   const rawLayout = searchParams.get('layout') || INITIAL_FILTERS.layout;
+  const rawFeatures = searchParams.get('features') || '';
   const rawSort = searchParams.get('sort') || INITIAL_FILTERS.sort;
+
+  const features = rawFeatures
+    ? normalizeFeatureCodes(rawFeatures.split(','))
+    : [];
 
   return {
     keyword,
@@ -79,6 +98,7 @@ export function parseFiltersFromSearchParams(searchParams) {
       ? rawManagementFeeType
       : INITIAL_FILTERS.managementFeeType,
     layout: VALID_LAYOUTS.has(rawLayout) ? rawLayout : INITIAL_FILTERS.layout,
+    features,
     sort: VALID_SORTS.has(rawSort) ? rawSort : INITIAL_FILTERS.sort,
   };
 }
@@ -86,6 +106,7 @@ export function parseFiltersFromSearchParams(searchParams) {
 export function buildSearchParamsFromFilters(filters) {
   const params = new URLSearchParams();
   const trimmedKeyword = String(filters.keyword || '').trim();
+  const normalizedFeatures = normalizeFeatureCodes(filters.features);
 
   if (trimmedKeyword) params.set('q', trimmedKeyword);
   if (filters.city && filters.city !== INITIAL_FILTERS.city) {
@@ -102,6 +123,9 @@ export function buildSearchParamsFromFilters(filters) {
   }
   if (filters.layout && filters.layout !== INITIAL_FILTERS.layout) {
     params.set('layout', filters.layout);
+  }
+  if (normalizedFeatures.length > 0) {
+    params.set('features', normalizedFeatures.join(','));
   }
   if (filters.sort && filters.sort !== INITIAL_FILTERS.sort) {
     params.set('sort', filters.sort);

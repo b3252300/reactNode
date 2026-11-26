@@ -3,10 +3,14 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently --kill-others --names backend,frontend --prefix-colors blue,green \"npm:dev --prefix backend\" \"npm:dev --prefix frontend\""
+    "dev": "concurrently --kill-others --names backend,frontend --prefix-colors blue,green \"npm:dev --prefix backend\" \"npm:dev --prefix frontend\"",
+    "build": "npm --prefix frontend run build",
+    "cf:dev": "npm run build && wrangler dev",
+    "deploy": "npm run build && wrangler deploy"
   },
   "devDependencies": {
-    "concurrently": "^9.1.2"
+    "concurrently": "^9.1.2",
+    "wrangler": "^4.168.0"
   },
   "dependencies": {
     "moment": "^2.31.0",

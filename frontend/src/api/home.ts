@@ -32,6 +32,7 @@ export interface PublicVacantQueryParams {
   maxRent?: number | string;
   managementFeeType?: ManagementFeeFilter;
   layout?: string;
+  features?: number[] | string;
   sort?: PublicSortOption;
   north?: number;
   south?: number;
@@ -46,6 +47,12 @@ export async function getPublicVacantAssetsApi(
 
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
+      if (Array.isArray(value)) {
+        if (value.length > 0) {
+          cleanedParams[key] = value.join(',');
+        }
+        return;
+      }
       if (value !== undefined && value !== null && value !== '' && value !== 'all') {
         cleanedParams[key] = value;
       }

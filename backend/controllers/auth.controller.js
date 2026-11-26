@@ -1,5 +1,6 @@
 // 管理註冊、登入與 cookie 驗證流程,並確保回應只包含公開使用者資料
-const bcrypt = require('bcrypt');
+// bcryptjs 為純 JavaScript 實作，可在 Node.js 與 Cloudflare Workers 執行，且與原 bcrypt 雜湊相容。
+const bcrypt = require('bcryptjs');
 const crypto = require('node:crypto');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
@@ -13,25 +14,32 @@ const ACCESS_MS = 15 * 60 * 1000;
 const REFRESH_MS = 7 * 24 * 60 * 60 * 1000;
 // refresh token 由 48 個隨機位元組轉成 96 個十六進位字元。
 const REFRESH_TOKEN_PATTERN = /^[a-f0-9]{96}$/;
-const config = getConfig();
 // Cookie 設定集中管理，避免登入、登出時使用不同的安全選項。
-const cookieBase = {
-  httpOnly: true,
-  secure: config.nodeEnv === 'production',
-  sameSite: config.cookieSameSite,
-};
-// 瀏覽器會在每次請求時依 path 決定是否附加對應 cookie。
-const accessCookie = { ...cookieBase, path: '/', maxAge: ACCESS_MS };
-const refreshCookie = {
-  ...cookieBase,
-  path: '/api/auth',
-  maxAge: REFRESH_MS,
-};
+// 延遲到請求階段才讀取 config，避免 Cloudflare Workers 首次部署載入模組時因尚未設定 secret 而失敗。
+function getCookieOptions() {
+  const config = getConfig();
+  const base = {
+    httpOnly: true,
+    secure: config.nodeEnv === 'production',
+    sameSite: config.cookieSameSite,
+  };
+  return {
+    base,
+    // 瀏覽器會在每次請求時依 path 決定是否附加對應 cookie。
+    access: { ...base, path: '/', maxAge: ACCESS_MS },
+    refresh: { ...base, path: '/api/auth', maxAge: REFRESH_MS },
+  };
+}
 // 若登入帳號不存在也用 bcrypt 比對這個假雜湊，降低藉由回應時間猜測帳號的機會。
-const dummyPasswordHash = bcrypt.hashSync(
-  crypto.randomBytes(32).toString('hex'),
-  12
-);
+// 延遲到第一次登入時才產生：Cloudflare Workers 不允許在全域範圍產生亂數或執行耗時運算。
+let dummyPasswordHashPromise = null;
+function getDummyPasswordHash() {
+  dummyPasswordHashPromise ??= bcrypt.hash(
+    crypto.randomBytes(32).toString('hex'),
+    12
+  );
+  return dummyPasswordHashPromise;
+}
 
 // 登入時的輸入規則；bcrypt 最多處理 72 個 UTF-8 位元組。
 const loginSchema = z.object({
@@ -64,7 +72,7 @@ function sha256(value) {
 
 // 簽署短效 JWT（JSON Web Token，包含使用者識別資訊的簽章憑證）。
 function signAccessToken(userId) {
-  return jwt.sign({ sub: String(userId) }, config.jwtAccessSecret, {
+  return jwt.sign({ sub: String(userId) }, getConfig().jwtAccessSecret, {
     algorithm: 'HS256',
     expiresIn: '15m',
     issuer: 'react-node-auth',
@@ -81,14 +89,16 @@ async function issueTokens(res, userId) {
     expiresAt: new Date(Date.now() + REFRESH_MS),
   });
 
-  res.cookie('access_token', signAccessToken(userId), accessCookie);
-  res.cookie('refresh_token', rawToken, refreshCookie);
+  const cookies = getCookieOptions();
+  res.cookie('access_token', signAccessToken(userId), cookies.access);
+  res.cookie('refresh_token', rawToken, cookies.refresh);
 }
 
 // 登出或登入過期時清除 cookie；path 必須與設定 cookie 時相同。
 function clearAuthCookies(res) {
-  res.clearCookie('access_token', { ...cookieBase, path: '/' });
-  res.clearCookie('refresh_token', { ...cookieBase, path: '/api/auth' });
+  const { base } = getCookieOptions();
+  res.clearCookie('access_token', { ...base, path: '/' });
+  res.clearCookie('refresh_token', { ...base, path: '/api/auth' });
 }
 
 // 組合可公開回傳的使用者欄位，不直接回傳整筆資料庫文件。
@@ -159,7 +169,7 @@ async function login(req, res) {
   // 帳號不存在時改用假雜湊執行同樣的比對，降低帳號枚舉風險。
   const passwordMatches = await bcrypt.compare(
     parsed.data.password,
-    user?.passwordHash || dummyPasswordHash
+    user?.passwordHash || (await getDummyPasswordHash())
   );
 
   if (!user || !passwordMatches) {

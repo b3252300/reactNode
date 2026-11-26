@@ -1,0 +1,5 @@
+# 複製為 .dev.vars 供 `npm run cf:dev`（wrangler dev）使用；不要提交 .dev.vars
+MONGODB_URI=mongodb+srv://<user>:<password>@<cluster>.mongodb.net/react_node_db
+JWT_ACCESS_SECRET=replace-with-a-random-secret-at-least-32-characters
+CLIENT_ORIGIN=http://localhost:8787
+NODE_ENV=development

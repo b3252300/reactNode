@@ -1,12 +1,16 @@
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
+  Check,
   LayoutGrid,
   RotateCcw,
   Search,
+  Tag,
   X,
 } from 'lucide-react';
 import {
   CITY_OPTIONS,
+  FEATURE_OPTIONS,
   LAYOUT_OPTIONS,
   MANAGEMENT_FEE_OPTIONS,
   RENT_RANGE_OPTIONS,
@@ -25,6 +29,27 @@ function MapFilterBar({
   hasBoundsFilter,
 }) {
   const listViewHref = `/${buildFilterQueryString(filters)}`;
+  const [featureMenuOpen, setFeatureMenuOpen] = useState(false);
+  const featureMenuRef = useRef(null);
+  const selectedFeatures = Array.isArray(filters.features) ? filters.features : [];
+
+  useEffect(() => {
+    if (!featureMenuOpen) return undefined;
+    const handleClickOutside = (event) => {
+      if (featureMenuRef.current && !featureMenuRef.current.contains(event.target)) {
+        setFeatureMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [featureMenuOpen]);
+
+  const handleToggleFeature = (code) => {
+    const nextFeatures = selectedFeatures.includes(code)
+      ? selectedFeatures.filter((item) => item !== code)
+      : [...selectedFeatures, code].sort((a, b) => a - b);
+    onFilterChange('features', nextFeatures);
+  };
 
   return (
     <section className="shrink-0 z-20 border-b border-slate-200 bg-white/95 dark:border-slate-800/90 dark:bg-[#0B1120]/95 backdrop-blur px-3 sm:px-4 py-2.5">
@@ -134,6 +159,68 @@ function MapFilterBar({
             </option>
           ))}
         </select>
+
+        {/* 物件標籤多選 */}
+        <div className="relative" ref={featureMenuRef}>
+          <button
+            type="button"
+            aria-expanded={featureMenuOpen}
+            onClick={() => setFeatureMenuOpen((prev) => !prev)}
+            className={`inline-flex items-center gap-1.5 h-9 rounded-lg border px-2.5 text-xs font-medium transition cursor-pointer ${
+              selectedFeatures.length > 0
+                ? 'border-amber-500/60 bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 dark:border-slate-800 dark:bg-slate-950/90 dark:text-slate-200 dark:hover:border-slate-700'
+            }`}
+          >
+            <Tag className="h-3.5 w-3.5 text-amber-500 dark:text-amber-400" />
+            <span>物件標籤</span>
+            {selectedFeatures.length > 0 && (
+              <span className="inline-flex items-center justify-center rounded-full bg-amber-500 px-1.5 py-0.2 text-[10px] font-bold text-slate-950">
+                {selectedFeatures.length}
+              </span>
+            )}
+          </button>
+
+          {featureMenuOpen && (
+            <div className="absolute left-0 top-full mt-2 z-50 w-72 rounded-xl border border-slate-200 bg-white p-3 shadow-xl dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                  篩選物件標籤（可複選）
+                </span>
+                {selectedFeatures.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => onFilterChange('features', [])}
+                    className="text-[11px] font-medium text-amber-600 hover:text-amber-500 dark:text-amber-400 cursor-pointer"
+                  >
+                    清除標籤
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {FEATURE_OPTIONS.map((feature) => {
+                  const isActive = selectedFeatures.includes(feature.code);
+                  return (
+                    <button
+                      key={feature.code}
+                      type="button"
+                      aria-pressed={isActive}
+                      onClick={() => handleToggleFeature(feature.code)}
+                      className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition cursor-pointer ${
+                        isActive
+                          ? 'bg-amber-500 text-slate-950 shadow-sm'
+                          : 'border border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-slate-600'
+                      }`}
+                    >
+                      {isActive && <Check className="h-3 w-3" />}
+                      {feature.value}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
 
         <div className="flex items-center gap-2 ml-auto">
           {(hasActiveFilters || hasBoundsFilter) && (

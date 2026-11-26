@@ -176,6 +176,7 @@ export default function MapSearchPage() {
     filters.rentRangeId !== 'all' ||
     filters.managementFeeType !== 'all' ||
     filters.layout !== 'all' ||
+    filters.features.length > 0 ||
     filters.sort !== 'newest',
   );
 
@@ -212,6 +213,7 @@ export default function MapSearchPage() {
         maxRent: selectedRentRange.maxRent,
         managementFeeType: filters.managementFeeType !== 'all' ? filters.managementFeeType : undefined,
         layout: filters.layout !== 'all' ? filters.layout : undefined,
+        features: filters.features.length > 0 ? filters.features : undefined,
         sort: filters.sort,
         ...(activeBounds
           ? {
@@ -239,6 +241,7 @@ export default function MapSearchPage() {
     selectedRentRange.maxRent,
     filters.managementFeeType,
     filters.layout,
+    filters.features,
     filters.sort,
     activeBounds,
   ]);

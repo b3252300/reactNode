@@ -5,16 +5,17 @@ const helmet = require('helmet');
 const { getConfig } = require('./config');
 const authRoutes = require('./routes/auth.routes');
 
-const config = getConfig();
 const propertyStatusAssetsRoutes = require('./routes/propertyStatusAssets.routes');
 const app = express();
 
 app.disable('x-powered-by');
 app.use(helmet());
 app.use(
-  cors({
-    origin: config.clientOrigin,
-    credentials: true,
+  cors((req, callback) => {
+    callback(null, {
+      origin: getConfig().clientOrigin,
+      credentials: true,
+    });
   })
 );
 app.use(express.json({ limit: '30mb' }));
@@ -25,7 +26,7 @@ app.use((req, res, next) => {
     req.path.startsWith('/api/auth/') &&
     ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) &&
     req.get('origin') &&
-    req.get('origin') !== config.clientOrigin
+    req.get('origin') !== getConfig().clientOrigin
   ) {
     return res.status(403).json({ message: '不允許的來源' });
   }
