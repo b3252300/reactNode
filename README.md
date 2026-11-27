@@ -148,4 +148,3 @@ npm run cf:dev
 npm run deploy
 ```
 
-> 完整的 Cloudflare Workers 與 MongoDB Atlas 首次部署設定，請參閱 [`Deploy.md`](./Deploy.md)。
