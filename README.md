@@ -120,18 +120,9 @@ npm --prefix frontend install
 npm --prefix backend install
 ```
 
-### 3. 設定環境變數
-複製後端範例設定檔 `backend/.env.example` 為 `backend/.env`，並填入對應設定：
-```env
-NODE_ENV=development
-PORT=4000
-MONGODB_URI=mongodb://127.0.0.1:27017/react_node_db
-CLIENT_ORIGIN=http://localhost:5173
-JWT_ACCESS_SECRET=replace-this-with-a-random-secret-at-least-32-characters
-COOKIE_SAME_SITE=lax
-```
 
-### 4. 啟動開發伺服器
+
+### 3. 啟動開發伺服器
 確認 MongoDB 已啟動後，在專案根目錄執行：
 ```bash
 npm run dev
