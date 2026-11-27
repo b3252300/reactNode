@@ -1,12 +1,12 @@
 ---
 name: auth
-description: 在 React + Node.js (Express) 全端專案中實作註冊、登入、登出、會員清單與驗證流程 (registration / login / logout / member list / authentication)。專用開發登入、登出、註冊、會員列表、JWT、cookie、session、token、refresh token、受保護路由 (protected route)、使用者驗證、auth middleware,或要在 React 與 Node 專案加入帳號系統與會員管理,即使沒有明說「skill」也要使用。也適用於審查或修正既有的驗證程式碼。
+description: 在 React + Node.js (Express) 全端專案中實作註冊、登入、登出、會員清單與驗證流程 (registration / login / logout / member list / authentication)。專用開發登入、登出、註冊、會員列表、JWT、cookie、session、token、refresh token、受保護路由 (protected route)、使用者驗證、auth middleware。
 ---
 
 # React + Node 帳號註冊、登入、會員清單與驗證 Skill
 
 這個 skill 規範如何在 React 前端與 Node.js (Express) 後端實作安全的註冊、登入、登出與會員清單查詢。
-目標是產出「能直接用在專案裡」且「安全預設值正確」的程式碼,而不是只能跑的範例。
+目標是產出「能直接用在專案裡」且「安全預設值正確」的程式碼。
 
 ## 溝通方式
 
